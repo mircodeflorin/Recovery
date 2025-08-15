@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Recovery‑Tagebuch</title>
+  <meta name="description" content="Recovery‑Tagebuch: To‑Dos (gewichtet), Stimmung, Reflexionen und Fortschrittsgrafiken." />
+  <meta name="theme-color" content="#0a84ff" />
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Recovery">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #ffffff;
+      --bg-soft: #f5f7fb;
+      --fg: #0b1320;
+      --muted: #6b7280;
+      --primary: #0a84ff;
+      --primary-weak: #e5f1ff;
+      --ok: #16a34a;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --shadow: 0 6px 20px rgba(0,0,0,0.06);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0b0f17;
+        --bg-soft: #0f1522;
+        --fg: #ecf0f8;
+        --muted: #9aa3b2;
+        --primary: #3ea0ff;
+        --primary-weak: #0b2039;
+        --ok: #22c55e;
+        --warn: #fbbf24;
+        --bad: #f87171;
+        --card: #101827;
+        --border: #1f2937;
+        --shadow: 0 6px 20px rgba(0,0,0,0.25);
+      }
+    }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans";
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.45;
+    }
+    a { color: var(--primary); text-decoration: none; }
+    header {
+      position: sticky; top: 0; z-index: 10;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: .75rem;
+      padding: .5rem 1rem;
+    }
+    .brand { font-weight: 700; font-size: 1.05rem; }
+    .spacer { flex: 1; }
+    .btn, button, input[type="submit"] {
+      appearance: none; border: 1px solid var(--border);
+      background: var(--card); color: var(--fg);
+      padding: .6rem .9rem; border-radius: 10px;
+      font-weight: 600; cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+    .btn.primary { background: var(--primary); border-color: var(--primary); color: white; }
+    .btn.ghost { background: transparent; border-color: var(--border); box-shadow: none; }
+    .btn.small { padding: .45rem .65rem; font-size: .9rem; }
+    .badge { display:inline-flex; align-items:center; gap:.35rem; padding:.25rem .5rem; border-radius:999px; border:1px solid var(--border); background: var(--bg-soft); font-size:.8rem; color: var(--muted); }
+    .container { padding: 1rem; max-width: 1200px; margin: 0 auto; }
+    .grid { display: grid; gap: 1rem; }
+    @media (min-width: 900px) {
+      .layout { display: grid; grid-template-columns: 230px 1fr; gap: 1rem; }
+      nav.sidenav { position: sticky; top: 66px; height: calc(100vh - 66px); overflow:auto; }
+    }
+    nav.sidenav { padding: .5rem; }
+    .navlink {
+      display: flex; align-items: center; gap: .6rem;
+      padding: .6rem .75rem; border-radius: 10px; color: var(--fg);
+    }
+    .navlink.active { background: var(--primary-weak); border: 1px solid var(--primary); }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1rem; box-shadow: var(--shadow);
+    }
+    .row { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; }
+    .col { flex: 1 1 250px; }
+    label { display: block; font-weight: 600; margin: .35rem 0; }
+    input[type="text"], input[type="email"], input[type="password"], textarea, select {
+      width: 100%; box-sizing: border-box; padding: .6rem .7rem; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--bg);
+      color: var(--fg);
+    }
+    textarea { min-height: 100px; }
+    .muted { color: var(--muted); }
+    .kpi { display:flex; gap:1rem; flex-wrap:wrap; }
+    .kpi .item {
+      flex:1 1 160px; min-width: 140px;
+      background: var(--bg-soft); border:1px solid var(--border);
+      border-radius:12px; padding:.75rem;
+    }
+    .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+    .dot.green { background: var(--ok); } .dot.yellow { background: var(--warn); } .dot.red { background: var(--bad); } .dot.gray { background: #9ca3af; }
+    .list { display: grid; gap: .5rem; }
+    .task {
+      display:grid; grid-template-columns: 1.5rem 1fr 120px 90px auto; gap:.5rem; align-items:center;
+      padding:.5rem; border-radius:10px; border:1px solid var(--border); background: var(--bg);
+    }
+    @media (max-width: 640px) {
+      .task { grid-template-columns: 1.5rem 1fr; grid-auto-rows: auto; }
+      .task .w, .task .actions, .task .meta { grid-column: 2 / -1; }
+    }
+    .progressbar { height: 12px; width: 100%; background: var(--bg-soft); border-radius: 999px; overflow: hidden; border:1px solid var(--border); }
+    .progressbar > span { display:block; height:100%; background: var(--ok); width:0%; transition: width .3s ease; }
+    .pill { padding:.25rem .6rem; border-radius:999px; background: var(--bg-soft); border:1px solid var(--border); }
+    .footer { margin-top: 2rem; padding: 1rem; text-align: center; color: var(--muted); font-size: .9rem; }
+    .danger { color: var(--bad); }
+    .success { color: var(--ok); }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Recovery‑Tagebuch</div>
+    <span class="badge" id="dateBadge">Heute</span>
+    <div class="spacer"></div>
+    <span class="badge hidden" id="offlineBadge">Offline</span>
+    <button class="btn small ghost" id="exportBtn" title="Daten exportieren">Export</button>
+    <label class="btn small ghost" for="importFile" title="Daten importieren">Import</label>
+    <input id="importFile" type="file" accept="application/json" class="hidden" />
+    <button class="btn small" id="signBtn">Anmelden</button>
+  </header>
+
+  <div class="container">
+    <div id="authView" class="grid">
+      <div class="card">
+        <h2>Anmelden oder Konto erstellen</h2>
+        <p class="muted">Alle deine Inhalte werden lokal und verschlüsselt gespeichert (AES‑GCM). Ohne Passwort sind sie nicht lesbar.</p>
+        <form id="authForm" class="grid" autocomplete="on">
+          <div class="row">
+            <div class="col">
+              <label for="email">E‑Mail</label>
+              <input id="email" name="email" type="email" required placeholder="name@beispiel.ch" />
+            </div>
+            <div class="col">
+              <label for="password">Passwort</label>
+              <input id="password" name="password" type="password" required minlength="6" placeholder="••••••••" />
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <label for="name">Name (optional)</label>
+              <input id="name" name="name" type="text" placeholder="z. B. Alex" />
+            </div>
+            <div class="col" style="align-self:end">
+              <label><input type="checkbox" id="remember" /> E‑Mail merken (Passwort wird nie gespeichert)</label>
+            </div>
+          </div>
+          <div class="row">
+            <button class="btn primary" type="submit" id="loginBtn">Anmelden</button>
+            <button class="btn" type="button" id="registerBtn">Konto erstellen</button>
+          </div>
+        </form>
+        <p class="muted" style="margin-top:.75rem">
+          Hinweis: Wenn du das Passwort vergisst, sind die lokal verschlüsselten Daten nicht wiederherstellbar. Exportiere regelmäßig ein Backup (Einstellungen → Export).
+        </p>
+      </div>
+      <div class="card">
+        <h3>Sicherheits‑Hinweis</h3>
+        <p class="muted">Dieses Tool ersetzt keine professionelle Behandlung. In einer Krise bitte Notruf/psychiatrische Dienste kontaktieren.</p>
+      </div>
+    </div>
+
+    <div id="appView" class="layout hidden">
+      <nav class="sidenav card">
+        <a href="#" class="navlink" data-view="dashboard">Dashboard</a>
+        <a href="#" class="navlink" data-view="todos">To‑Dos</a>
+        <a href="#" class="navlink" data-view="journal">Tägliche Einträge</a>
+        <a href="#" class="navlink" data-view="weekly">Wöchentliche Reflexion</a>
+        <a href="#" class="navlink" data-view="creative">Kreative Module</a>
+        <a href="#" class="navlink" data-view="history">Verlauf & Grafiken</a>
+        <a href="#" class="navlink" data-view="quotes">Zitate</a>
+        <hr style="border:none;border-top:1px solid var(--border);margin:.75rem 0" />
+        <a href="#" class="navlink" data-view="settings">Einstellungen</a>
+      </nav>
+
+      <main id="main" class="grid">
+        <section id="view-dashboard" class="card">
+          <div class="row" style="justify-content:space-between; align-items: flex-start;">
+            <div>
+              <h2>Guten Tag, <span id="userNameSpan">Nutzer</span>!</h2>
+              <p class="muted" id="todayText">Heute ist …</p>
+            </div>
+            <div class="row" style="gap:.5rem">
+              <span class="badge">Auto‑Theme</span>
+              <span class="badge hidden" id="installHint">Installieren möglich</span>
+            </div>
+          </div>
+          <div class="kpi" style="margin-top:.5rem">
+            <div class="item">
+              <div class="muted">Heutige Erledigung (gewichtet)</div>
+              <div class="row" style="align-items:center;">
+                <div class="zone-label" id="todayPercentLabel">0%</div>
+                <div class="pill" id="zonePill"><span class="dot gray" style="width:10px;height:10px;border-radius:50%;display:inline-block;background:#9ca3af"></span>Keine Daten</div>
+              </div>
+              <div class="progressbar" style="margin-top:.5rem"><span id="todayProgress" style="width:0%"></span></div>
+            </div>
+            <div class="item">
+              <div class="muted">Aktive Aufgaben</div>
+              <div class="row" style="align-items:center;">
+                <div class="zone-label" id="taskCount">0</div>
+                <span class="pill">Gewichtung berücksichtigt</span>
+              </div>
+            </div>
+            <div class="item">
+              <div class="muted">Tagesstimmung</div>
+              <div class="row" style="align-items:center;">
+                <div class="zone-label" id="moodToday">–/10</div>
+                <span class="pill" id="moodHint">Vorschlag aus Erledigung</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid" style="margin-top:1rem">
+            <div class="card">
+              <h3>Schnellerfassung: To‑Do</h3>
+              <form id="quickTaskForm" class="row">
+                <input type="text" id="quickTaskTitle" placeholder="Neue Aufgabe (z. B. Zähneputzen)" required />
+                <label class="pill">Stärke:
+                  <input type="range" id="quickTaskWeight" min="1" max="10" value="3" />
+                  <span id="quickTaskWeightLabel" class="muted">3</span>
+                </label>
+                <button class="btn primary" type="submit">Hinzufügen</button>
+              </form>
+            </div>
+            <div class="card">
+              <h3>Heute abschließen</h3>
+              <p class="muted">Markiere erledigte Aufgaben und speichere den Tag.</p>
+              <div id="todayTasks" class="list"></div>
+              <div class="row" style="justify-content: space-between; margin-top:.75rem">
+                <button class="btn" id="selectNone">Alle abwählen</button>
+                <div class="row" style="gap:.5rem">
+                  <button class="btn" id="saveDayBtn">Heute speichern</button>
+                  <button class="btn ghost" id="clearTodayBtn" title="Heutige Markierungen löschen">Zurücksetzen</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-todos" class="card hidden">
+          <h2>To‑Dos (Gewichtung & Zonen)</h2>
+          <p class="muted">
+            Gewichtung (1–10) beeinflusst den Tages‑Prozentwert: Summe(gewichtet erledigt) / Summe(gewichtet gesamt).
+            Zonen: <span class="dot red" style="background:#ef4444;width:10px;height:10px;border-radius:50%;display:inline-block"></span> 0–50% •
+            <span class="dot yellow" style="background:#f59e0b;width:10px;height:10px;border-radius:50%;display:inline-block"></span> 50–80% •
+            <span class="dot green" style="background:#16a34a;width:10px;height:10px;border-radius:50%;display:inline-block"></span> 80–100%
+          </p>
+
+          <form id="addTaskForm" class="row" style="margin:.75rem 0">
+            <input type="text" id="taskTitle" placeholder="Aufgabe (z. B. Einkaufen)" required />
+            <label class="pill">Stärke:
+              <input type="range" id="taskWeight" min="1" max="10" value="5" />
+              <span id="taskWeightLabel" class="muted">5</span>
+            </label>
+            <button class="btn primary" type="submit">Hinzufügen</button>
+          </form>
+
+          <div id="taskList" class="list"></div>
+        </section>
+
+        <section id="view-journal" class="card hidden">
+          <h2>Tägliche Einträge</h2>
+          <div class="grid">
+            <div class="card">
+              <h3>Morgen‑Reflexion</h3>
+              <form id="morningForm" class="grid">
+                <div class="row">
+                  <div class="col">
+                    <label>Stimmung (1–10)</label>
+                    <input type="range" id="moodMorning" min="1" max="10" value="5" />
+                  </div>
+                  <div class="col">
+                    <label>Motto des Tages</label>
+                    <input type="text" id="motto" placeholder="Kurz und motivierend" />
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col">
+                    <label>Worauf freue ich mich?</label>
+                    <textarea id="joys" placeholder="…"></textarea>
+                  </div>
+                  <div class="col">
+                    <label>Meine Ziele</label>
+                    <textarea id="goals" placeholder="…"></textarea>
+                  </div>
+                </div>
+                <div>
+                  <label>Dankbarkeit</label>
+                  <textarea id="gratitude" placeholder="Wofür bin ich dankbar?"></textarea>
+                </div>
+                <button class="btn" type="submit">Morgen speichern</button>
+              </form>
+            </div>
+
+            <div class="card">
+              <h3>Abend‑Reflexion</h3>
+              <form id="eveningForm" class="grid">
+                <div class="row">
+                  <div class="col">
+                    <label>Stimmung (1–10)</label>
+                    <input type="range" id="moodEvening" min="1" max="10" value="5" />
+                  </div>
+                  <div class="col">
+                    <label>Selbstfürsorge</label>
+                    <input type="text" id="selfcare" placeholder="Was tat mir gut?" />
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col">
+                    <label>Erfolge</label>
+                    <textarea id="wins" placeholder="Was lief gut?"></textarea>
+                  </div>
+                  <div class="col">
+                    <label>Lernmomente</label>
+                    <textarea id="learnings" placeholder="Was habe ich gelernt?"></textarea>
+                  </div>
+                </div>
+                <div>
+                  <label>Schöne Momente</label>
+                  <textarea id="moments" placeholder="…"></textarea>
+                </div>
+                <button class="btn" type="submit">Abend speichern</button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-weekly" class="card hidden">
+          <h2>Wöchentliche Reflexion</h2>
+          <p class="muted">Wähle Woche (Montag–Sonntag) und reflektiere. Durchschnittswerte werden automatisch berechnet.</p>
+          <div class="row" style="align-items:center">
+            <label>Woche ab:
+              <input type="date" id="weekStart" />
+            </label>
+            <span class="pill" id="weekStats">Ø Erledigung: –, Ø Stimmung: –, Aufgaben: –</span>
+          </div>
+          <form id="weeklyForm" class="grid" style="margin-top:.75rem">
+            <div class="row">
+              <div class="col">
+                <label>Was lief gut?</label>
+                <textarea id="weekGood"></textarea>
+              </div>
+              <div class="col">
+                <label>Was habe ich gelernt?</label>
+                <textarea id="weekLearn"></textarea>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <label>Worauf bin ich stolz?</label>
+                <textarea id="weekCelebrate"></textarea>
+              </div>
+              <div class="col">
+                <label>Nächste Schritte</label>
+                <textarea id="weekNext"></textarea>
+              </div>
+            </div>
+            <button class="btn" type="submit">Woche speichern</button>
+          </form>
+        </section>
+
+        <section id="view-creative" class="card hidden">
+          <h2>Kreative Ausdrucksformen</h2>
+          <div class="grid">
+            <div class="card">
+              <h3>Stärken‑Wolke</h3>
+              <form id="strengthForm" class="row">
+                <input type="text" id="strengthInput" placeholder="z. B. Geduld, Humor, Mut" />
+                <button class="btn" type="submit">Hinzufügen</button>
+              </form>
+              <div id="strengthList" class="row" style="margin-top:.5rem"></div>
+            </div>
+            <div class="card">
+              <h3>Wohlfühl‑Insel</h3>
+              <textarea id="safePlace" placeholder="Beschreibe einen sicheren mentalen Ort …"></textarea>
+              <button class="btn small" id="saveSafePlace" style="margin-top:.5rem">Speichern</button>
+            </div>
+            <div class="card">
+              <h3>Gedankenlabyrinth</h3>
+              <textarea id="thoughts" placeholder="Raum zum Durchdenken komplexer Themen …"></textarea>
+              <button class="btn small" id="saveThoughts" style="margin-top:.5rem">Speichern</button>
+            </div>
+            <div class="card">
+              <h3>Recovery‑Reise</h3>
+              <textarea id="journey" placeholder="Wie verläuft deine Reise? Stationen, Erkenntnisse, Menschen …"></textarea>
+              <button class="btn small" id="saveJourney" style="margin-top:.5rem">Speichern</button>
+            </div>
+            <div class="card">
+              <h3>Brief an mein zukünftiges Ich</h3>
+              <form id="futureForm" class="row">
+                <input type="date" id="futureDate" />
+                <input type="text" id="futureMsg" placeholder="Deine Nachricht an dich selbst" />
+                <button class="btn" type="submit">Planen</button>
+              </form>
+              <div id="futureList" class="list" style="margin-top:.5rem"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-history" class="card hidden">
+          <h2>Verlauf & Grafiken</h2>
+          <div class="row" style="align-items:center">
+            <label>Zeitraum:
+              <select id="rangeSelect">
+                <option value="30">30 Tage</option>
+                <option value="90" selected>90 Tage</option>
+                <option value="180">180 Tage</option>
+                <option value="365">365 Tage</option>
+                <option value="all">Alles</option>
+              </select>
+            </label>
+            <span class="pill">Kennzahl: Prozent (gewichtet). Produktivität = Aufgabenanzahl × Prozent / 100.</span>
+          </div>
+          <div class="grid" style="margin-top:.75rem">
+            <div class="card">
+              <h3>Erfolgsbarometer (Tage)</h3>
+              <canvas id="chartDaily" width="900" height="260"></canvas>
+            </div>
+            <div class="card">
+              <h3>Stimmung</h3>
+              <canvas id="chartMood" width="900" height="260"></canvas>
+            </div>
+          </div>
+          <div class="card" style="margin-top:.75rem">
+            <h3>Chronologische Einträge</h3>
+            <div class="row" style="align-items:center">
+              <label>Filter:
+                <select id="historyFilter">
+                  <option value="all">Alles</option>
+                  <option value="todo">To‑Do‑Tage</option>
+                  <option value="morning">Morgen</option>
+                  <option value="evening">Abend</option>
+                  <option value="weekly">Wöchentlich</option>
+                </select>
+              </label>
+            </div>
+            <div id="historyList" class="list" style="margin-top:.5rem"></div>
+          </div>
+        </section>
+
+        <section id="view-quotes" class="card hidden">
+          <h2>Inspirierende Zitate</h2>
+          <p class="muted">Zufällige Motivation, jederzeit abrufbar.</p>
+          <div class="row" style="align-items:center">
+            <button class="btn" id="newQuote">Neues Zitat</button>
+            <button class="btn ghost" id="favQuote">Zu Favoriten</button>
+          </div>
+          <blockquote id="quoteBox" style="margin:1rem 0; font-size:1.1rem">„Auch das geht vorbei.“</blockquote>
+          <div id="quoteFavs" class="list"></div>
+        </section>
+
+        <section id="view-settings" class="card hidden">
+          <h2>Einstellungen</h2>
+          <div class="grid">
+            <div class="card">
+              <h3>Konto</h3>
+              <p><strong>E‑Mail:</strong> <span id="accEmail">–</span></p>
+              <p><strong>Name:</strong> <span id="accName">–</span></p>
+              <div class="row">
+                <button class="btn" id="logoutBtn">Abmelden</button>
+                <button class="btn danger" id="deleteAccountBtn">Konto & Daten löschen</button>
+              </div>
+            </div>
+            <div class="card">
+              <h3>Datensicherung</h3>
+              <p class="muted">Exportiere deine Daten als JSON oder importiere sie.</p>
+              <div class="row">
+                <button class="btn" id="exportBtn2">Export</button>
+                <label class="btn" for="importFile2">Import</label>
+                <input id="importFile2" type="file" accept="application/json" class="hidden" />
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="footer">
+      © <span id="year"></span> Recovery‑Tagebuch • Dieser Prototyp ersetzt keine Therapie. Bei Krisen bitte Notfallkontakte nutzen.
+    </div>
+  </div>
+
+  <script>
+    // PWA: Service Worker registrieren (funktioniert nur über HTTPS/Domain)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(console.error);
+      });
+    }
+    window.addEventListener('online', () => document.getElementById('offlineBadge')?.classList.add('hidden'));
+    window.addEventListener('offline', () => document.getElementById('offlineBadge')?.classList.remove('hidden'));
+
+    // ---------- Helpers ----------
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
+    const todayStr = () => new Date().toISOString().slice(0,10);
+    const clamp = (v,a,b) => Math.max(a, Math.min(b,v));
+    const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const escapeHtml = (s='') => s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+
+    // ---------- Storage (verschlüsselt) ----------
+    const STORE_KEY = 'recapp_secure_v1';
+    function loadStore() {
+      try { return JSON.parse(localStorage.getItem(STORE_KEY)) || { users:{}, currentUserEmail:null }; }
+      catch { return { users:{}, currentUserEmail:null }; }
+    }
+    function saveStore(s) { localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
+    let store = loadStore();
+    let currentUser = null;  // In-Memory: entschlüsselte Felder
+    let encKey = null;       // CryptoKey für AES-GCM (nur im RAM)
+    let encSaltB64 = null;   // Salt (Base64) für PBKDF2
+
+    // ---------- Krypto ----------
+    const PBKDF2_ITER = 200000; // Balance aus Sicherheit/Performance (anpassbar)
+    const te = new TextEncoder();
+    const td = new TextDecoder();
+
+    const rand = (n) => crypto.getRandomValues(new Uint8Array(n));
+    const b64e = (u8) => btoa(String.fromCharCode(...u8));
+    const b64d = (s) => new Uint8Array(atob(s).split('').map(c => c.charCodeAt(0)));
+
+    async function sha256(text) {
+      const buf = await crypto.subtle.digest('SHA-256', te.encode(text));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+    async function hashPasswordAuth(password, saltAuth) {
+      // einfacher Hash für Login-Check (nicht für Datenverschlüsselung)
+      return sha256(password + ':' + saltAuth);
+    }
+    async function deriveKey(password, saltB64) {
+      const keyMaterial = await crypto.subtle.importKey('raw', te.encode(password), 'PBKDF2', false, ['deriveKey']);
+      const salt = saltB64 ? b64d(saltB64) : rand(16);
+      const key = await crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations: PBKDF2_ITER, hash: 'SHA-256' },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt','decrypt']
+      );
+      return { key, saltB64: b64e(salt) };
+    }
+    async function encryptPayload(obj, key) {
+      const iv = rand(12);
+      const data = te.encode(JSON.stringify(obj));
+      const ct = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, data);
+      return { iv: b64e(iv), data: b64e(new Uint8Array(ct)) };
+    }
+    async function decryptPayload(enc, key) {
+      const iv = b64d(enc.iv);
+      const ct = b64d(enc.data);
+      const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, ct);
+      return JSON.parse(td.decode(pt));
+    }
+
+    // ---------- Auth ----------
+    async function register(email, password, name) {
+      email = email.trim().toLowerCase();
+      if (!email || !password) throw new Error('E‑Mail und Passwort erforderlich.');
+      if (store.users[email]) throw new Error('Konto existiert bereits.');
+      const saltAuth = uid();
+      const passwordHash = await hashPasswordAuth(password, saltAuth);
+      // Anfangspayload
+      const payload = {
+        profile: { name: name || '' },
+        tasks: [],
+        days: {},
+        weeks: {},
+        creative: { staerken:[], wohlgefuehl:'', gedanken:'', reise:'', future:[] },
+        quotesFavorites: []
+      };
+      const { key, saltB64 } = await deriveKey(password); // eigener Salt für Daten
+      const enc = await encryptPayload(payload, key);
+      store.users[email] = {
+        email, createdAt: new Date().toISOString(),
+        saltAuth, passwordHash,
+        enc: { salt: saltB64, iv: enc.iv, data: enc.data }
+      };
+      saveStore(store);
+      return true;
+    }
+
+    async function login(email, password) {
+      email = email.trim().toLowerCase();
+      const rec = store.users[email];
+      if (!rec) throw new Error('Konto nicht gefunden.');
+      const check = await hashPasswordAuth(password, rec.saltAuth);
+      if (check !== rec.passwordHash) throw new Error('Falsches Passwort.');
+      const { key } = await deriveKey(password, rec.enc.salt);
+      const payload = await decryptPayload(rec.enc, key);
+      encKey = key; encSaltB64 = rec.enc.salt;
+      currentUser = Object.assign({ email: rec.email, createdAt: rec.createdAt, saltAuth: rec.saltAuth, passwordHash: rec.passwordHash }, payload);
+      if ($('#remember').checked) { store.currentUserEmail = email; saveStore(store); }
+      updateUIAuth();
+    }
+
+    async function reencryptAndSave(u) {
+      if (!encKey || !u?.email) return;
+      const recPrev = store.users[u.email] || {};
+      const payload = {
+        profile: u.profile || { name:'' },
+        tasks: u.tasks || [],
+        days: u.days || {},
+        weeks: u.weeks || {},
+        creative: u.creative || { staerken:[], wohlgefuehl:'', gedanken:'', reise:'', future:[] },
+        quotesFavorites: u.quotesFavorites || []
+      };
+      const enc = await encryptPayload(payload, encKey);
+      store.users[u.email] = {
+        email: u.email,
+        createdAt: recPrev.createdAt || u.createdAt || new Date().toISOString(),
+        saltAuth: recPrev.saltAuth || u.saltAuth,
+        passwordHash: recPrev.passwordHash || u.passwordHash,
+        enc: { salt: encSaltB64, iv: enc.iv, data: enc.data }
+      };
+      saveStore(store);
+    }
+
+    function logout() {
+      encKey = null; encSaltB64 = null; currentUser = null;
+      updateUIAuth();
+    }
+
+    // ---------- UI State ----------
+    function updateUIAuth() {
+      const isAuthed = !!currentUser;
+      $('#authView').classList.toggle('hidden', isAuthed);
+      $('#appView').classList.toggle('hidden', !isAuthed);
+      $('#signBtn').textContent = isAuthed ? 'Konto' : 'Anmelden';
+      if (isAuthed) {
+        $('#userNameSpan').textContent = currentUser.profile?.name || currentUser.email.split('@')[0];
+        $('#accEmail').textContent = currentUser.email;
+        $('#accName').textContent = currentUser.profile?.name || '–';
+        renderAll();
+      }
+    }
+    function setActiveView(view) {
+      $$('.navlink').forEach(a => a.classList.toggle('active', a.dataset.view === view));
+      $$('#main > section').forEach(s => s.classList.toggle('hidden', s.id !== 'view-' + view));
+      if (view === 'history') drawCharts();
+    }
+
+    // ---------- Domain Logic ----------
+    function zoneFromPercent(p) {
+      if (p == null || isNaN(p)) return { name:'Keine Daten', color:'gray' };
+      if (p < 50) return { name:'Rot', color:'red' };
+      if (p < 80) return { name:'Gelb', color:'yellow' };
+      return { name:'Grün', color:'green' };
+    }
+    function weightedPercentForDay(day, tasks, doneIds) {
+      const active = tasks.filter(t => t.active !== false);
+      const totalW = active.reduce((s,t) => s + (Number(t.weight)||1), 0);
+      const doneW = active.filter(t => doneIds.includes(t.id)).reduce((s,t) => s + (Number(t.weight)||1), 0);
+      if (totalW <= 0) return 0;
+      return Math.round(100 * doneW / totalW);
+    }
+    function compositeScore(percent, taskCount) {
+      return Math.round((taskCount || 0) * (percent || 0) / 100);
+    }
+    function isoWeekKey(dateISO) {
+      const d = new Date(dateISO);
+      const day = (d.getUTCDay() + 6) % 7; // Mon=0
+      d.setUTCDate(d.getUTCDate() - day);
+      return d.toISOString().slice(0,10);
+    }
+    function formatDatePretty(iso) {
+      try { return new Date(iso).toLocaleDateString(undefined, { weekday:'short', year:'numeric', month:'short', day:'numeric' }); }
+      catch { return iso; }
+    }
+
+    // ---------- Rendering ----------
+    function renderDateBadge() {
+      const d = new Date();
+      $('#dateBadge').textContent = d.toLocaleDateString(undefined, { weekday:'short', day:'2-digit', month:'2-digit' });
+      $('#todayText').textContent = d.toLocaleDateString(undefined, { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+      $('#year').textContent = new Date().getFullYear();
+      if (!navigator.onLine) $('#offlineBadge')?.classList.remove('hidden');
+    }
+
+    function renderTasks() {
+      const list = $('#taskList'); list.innerHTML = '';
+      const tasks = currentUser.tasks || [];
+      for (const t of tasks) {
+        const row = document.createElement('div');
+        row.className = 'task';
+        row.innerHTML = `
+          <input type="checkbox" ${t.active !== false ? 'checked' : ''} title="Aktiv/Inaktiv" />
+          <div class="title" contenteditable="true" spellcheck="false">${escapeHtml(t.title)}</div>
+          <div class="w"><label>Stärke: <input type="range" min="1" max="10" value="${Number(t.weight)||1}" /></label></div>
+          <div class="meta"><span class="pill">Gewicht: <b>${Number(t.weight)||1}</b></span></div>
+          <div class="actions row"><button class="btn small danger">Löschen</button></div>
+        `;
+        const chk = row.children[0];
+        const titleDiv = row.children[1];
+        const range = row.querySelector('input[type="range"]');
+        const meta = row.querySelector('.meta');
+        const delBtn = row.querySelector('.actions button');
+
+        chk.addEventListener('change', async () => { t.active = chk.checked; await reencryptAndSave(currentUser); renderTodayTasks(); renderDashboard(); });
+        range.addEventListener('input', () => { t.weight = Number(range.value); meta.innerHTML = `<span class="pill">Gewicht: <b>${t.weight}</b></span>`; });
+        range.addEventListener('change', async () => { await reencryptAndSave(currentUser); renderDashboard(); });
+        titleDiv.addEventListener('blur', async () => { t.title = titleDiv.textContent.trim(); await reencryptAndSave(currentUser); renderTodayTasks(); });
+        delBtn.addEventListener('click', async () => {
+          if (confirm('Aufgabe wirklich löschen?')) {
+            currentUser.tasks = currentUser.tasks.filter(x => x.id !== t.id);
+            await reencryptAndSave(currentUser); renderTasks(); renderTodayTasks(); renderDashboard();
+          }
+        });
+        list.appendChild(row);
+      }
+    }
+
+    function renderTodayTasks() {
+      const cont = $('#todayTasks'); cont.innerHTML = '';
+      const tasks = currentUser.tasks.filter(t => t.active !== false);
+      const day = currentUser.days[todayStr()] || { doneTaskIds: [] };
+      for (const t of tasks) {
+        const row = document.createElement('div');
+        row.className = 'task';
+        row.innerHTML = `
+          <input type="checkbox" ${day.doneTaskIds?.includes(t.id) ? 'checked' : ''} />
+          <div>${escapeHtml(t.title)}</div>
+          <div class="w">Stärke: <b>${t.weight}</b></div>
+          <div class="meta"><span class="pill">ID: ${t.id.slice(0,4)}</span></div>
+          <div class="actions row"><button class="btn small ghost">Entmarkieren</button></div>
+        `;
+        const chk = row.querySelector('input[type="checkbox"]');
+        const btn = row.querySelector('button');
+        chk.addEventListener('change', () => toggleDoneToday(t.id, chk.checked));
+        btn.addEventListener('click', () => { chk.checked = false; toggleDoneToday(t.id, false); });
+        cont.appendChild(row);
+      }
+    }
+
+    function renderDashboard() {
+      const dayKey = todayStr();
+      const day = currentUser.days[dayKey] || { doneTaskIds: [], weightedPercent: null, moodUser: null };
+      const tasks = currentUser.tasks.filter(t => t.active !== false);
+      const percent = (typeof day.weightedPercent === 'number') ? day.weightedPercent : weightedPercentForDay(dayKey, currentUser.tasks, day.doneTaskIds || []);
+      const mood = day.moodUser != null ? day.moodUser : Math.round(clamp(percent/100 * 9 + 1, 1, 10));
+      $('#todayPercentLabel').textContent = (percent ?? 0) + '%';
+      $('#todayProgress').style.width = (percent ?? 0) + '%';
+      const zone = zoneFromPercent(percent);
+      $('#zonePill').innerHTML = `<span class="dot ${zone.color}" style="background:${zone.color==='green'?'#16a34a':zone.color==='yellow'?'#f59e0b':zone.color==='red'?'#ef4444':'#9ca3af'};width:10px;height:10px;border-radius:50%;display:inline-block"></span>${zone.name}`;
+      $('#taskCount').textContent = tasks.length;
+      $('#moodToday').textContent = mood + '/10';
+      $('#moodHint').textContent = day.moodUser != null ? 'Manuell gesetzt' : 'Vorschlag aus Erledigung';
+    }
+
+    function renderStrengths() {
+      const box = $('#strengthList'); box.innerHTML = '';
+      for (const s of currentUser.creative.staerken || []) {
+        const chip = document.createElement('span');
+        chip.className = 'pill'; chip.textContent = s; chip.title = 'Zum Entfernen klicken';
+        chip.addEventListener('click', async () => {
+          currentUser.creative.staerken = currentUser.creative.staerken.filter(x => x !== s);
+          await reencryptAndSave(currentUser); renderStrengths();
+        });
+        box.appendChild(chip);
+      }
+    }
+
+    function renderFuture() {
+      const list = $('#futureList'); list.innerHTML = '';
+      const arr = currentUser.creative.future || [];
+      for (const f of arr.sort((a,b)=>a.date.localeCompare(b.date))) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="row" style="justify-content:space-between">
+            <div><b>${formatDatePretty(f.date)}</b> – ${escapeHtml(f.message)}</div>
+            <div class="row">
+              <span class="pill ${f.delivered ? 'success' : ''}">${f.delivered ? 'Zugestellt' : 'Geplant'}</span>
+              <button class="btn small ghost">Löschen</button>
+            </div>
+          </div>
+        `;
+        card.querySelector('button').addEventListener('click', async () => {
+          currentUser.creative.future = currentUser.creative.future.filter(x => x.id !== f.id);
+          await reencryptAndSave(currentUser); renderFuture();
+        });
+        list.appendChild(card);
+      }
+    }
+
+    function renderQuotes() {
+      $('#quoteFavs').innerHTML = '';
+      for (const q of currentUser.quotesFavorites || []) {
+        const row = document.createElement('div');
+        row.className = 'card';
+        row.innerHTML = `<div class="row" style="justify-content:space-between"><div>${escapeHtml(q)}</div><button class="btn small ghost">Entfernen</button></div>`;
+        row.querySelector('button').addEventListener('click', async () => {
+          currentUser.quotesFavorites = currentUser.quotesFavorites.filter(x => x !== q);
+          await reencryptAndSave(currentUser); renderQuotes();
+        });
+        $('#quoteFavs').appendChild(row);
+      }
+    }
+
+    function renderHistoryList() {
+      const filter = $('#historyFilter').value;
+      const list = $('#historyList'); list.innerHTML = '';
+      const items = [];
+
+      // Days
+      for (const [date, d] of Object.entries(currentUser.days)) {
+        items.push({ type:'todo', date, html: `
+          <div><b>${formatDatePretty(date)}</b> – Erledigung: ${d.weightedPercent ?? '–'}%, Aufgaben: ${d.tasksCount ?? '–'}, Stimmung: ${d.moodUser ?? d.moodSuggested ?? '–'}/10</div>
+          <div class="muted">Erledigt: ${(d.doneTaskIds||[]).length} | Notizen: ${(d.morning?.motto||'')} ${(d.evening?.wins? ' • ' + d.evening.wins.split('\n')[0] : '')}</div>
+        `});
+        if (d.morning && (d.morning.motto || d.morning.joys || d.morning.goals || d.morning.gratitude)) {
+          items.push({ type:'morning', date, html: `
+            <div><b>${formatDatePretty(date)}</b> – Morgen</div>
+            <div class="muted">Motto: ${escapeHtml(d.morning.motto||'–')}</div>
+          `});
+        }
+        if (d.evening && (d.evening.wins || d.evening.moments || d.evening.learnings || d.evening.selfcare)) {
+          items.push({ type:'evening', date, html: `
+            <div><b>${formatDatePretty(date)}</b> – Abend</div>
+            <div class="muted">Erfolge: ${escapeHtml((d.evening.wins||'').split('\n')[0] || '–')}</div>
+          `});
+        }
+      }
+      // Weeks
+      for (const [wk, w] of Object.entries(currentUser.weeks)) {
+        items.push({ type:'weekly', date: wk, html: `
+          <div><b>Woche ab ${formatDatePretty(wk)}</b> – Ø Erledigung: ${Math.round(w.avgPercent||0)}%, Ø Stimmung: ${Math.round(w.avgMood||0)}/10</div>
+          <div class="muted">Gut: ${escapeHtml((w.good||'').slice(0,140))} …</div>
+        `});
+      }
+
+      items.sort((a,b)=> a.date.localeCompare(b.date)).reverse();
+      for (const it of items) {
+        if (filter !== 'all' && it.type !== filter) continue;
+        const c = document.createElement('div');
+        c.className = 'card';
+        c.innerHTML = it.html;
+        list.appendChild(c);
+      }
+    }
+
+    function renderAll() {
+      renderDateBadge();
+      renderTasks();
+      renderTodayTasks();
+      renderDashboard();
+      renderStrengths();
+      renderFuture();
+      renderHistoryList();
+      renderQuotes();
+    }
+
+    // ---------- Charts ----------
+    function getCss(varName) { return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }
+    function hexWithAlpha(hex, a=0.2) {
+      if (hex.startsWith('rgb')) {
+        const [r,g,b] = hex.replace(/[^\d,]/g,'').split(',').map(Number);
+        return `rgba(${r},${g},${b},${a})`;
+      }
+      const h = hex.replace('#','');
+      const bigint = parseInt(h.length===3 ? h.split('').map(c=>c+c).join('') : h, 16);
+      const r = (bigint >> 16) & 255, g = (bigint >> 8) & 255, b = bigint & 255;
+      return `rgba(${r},${g},${b},${a})`;
+    }
+    function drawNoData(ctx, cvs, text) {
+      ctx.fillStyle = getCss('--muted'); ctx.textAlign = 'center'; ctx.fillText(text, cvs.width/2, cvs.height/2); ctx.textAlign = 'start';
+    }
+    function getRangeDays() { const sel = $('#rangeSelect').value; return sel === 'all' ? 5000 : Number(sel || 90); }
+    function collectDailySeries() {
+      const maxDays = getRangeDays();
+      const entries = Object.entries(currentUser.days).sort((a,b)=> a[0].localeCompare(b[0]));
+      const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - maxDays);
+      const data = [];
+      for (const [date, d] of entries) {
+        const dt = new Date(date); if (isNaN(dt)) continue;
+        if (maxDays !== 5000 && dt < cutoff) continue;
+        data.push({ x: dt, percent: d.weightedPercent ?? 0, tasks: d.tasksCount ?? 0, mood: (d.moodUser ?? d.moodSuggested ?? null) });
+      }
+      return data;
+    }
+    function drawDailyChart() {
+      const cvs = $('#chartDaily'); const ctx = cvs.getContext('2d'); const data = collectDailySeries();
+      ctx.clearRect(0,0,cvs.width,cvs.height);
+      if (!data.length) { drawNoData(ctx, cvs, 'Noch keine Tagesdaten'); return; }
+      const padding = { l:40, r:20, t:15, b:30 };
+      const xs = data.map(d=>d.x.getTime());
+      const minX = Math.min(...xs), maxX = Math.max(...xs);
+      const minY = 0, maxY = 100;
+      const w = cvs.width - padding.l - padding.r; const h = cvs.height - padding.t - padding.b;
+      const X = t => padding.l + (w * (t - minX) / (maxX - minX || 1));
+      const Y = v => padding.t + h - (h * (v - minY) / (maxY - minY || 1));
+      // Grid
+      ctx.strokeStyle = getCss('--border'); ctx.lineWidth = 1;
+      for (let y=0; y<=100; y+=20) { ctx.beginPath(); ctx.moveTo(padding.l, Y(y)); ctx.lineTo(cvs.width - padding.r, Y(y)); ctx.stroke(); ctx.fillStyle = getCss('--muted'); ctx.fillText(y+'%', 4, Y(y)+3); }
+      // Bars tasks
+      const barW = Math.max(2, w / data.length * 0.4);
+      ctx.fillStyle = hexWithAlpha(getCss('--primary'), 0.2);
+      data.forEach(d => { const x = X(d.x.getTime()) - barW/2; const th = Math.min(h, d.tasks * 4); ctx.fillRect(x, Y(0)-th, barW, th); });
+      // Line percent
+      ctx.strokeStyle = getCss('--primary'); ctx.lineWidth = 2; ctx.beginPath();
+      data.forEach((d,i) => { const x=X(d.x.getTime()), y=Y(d.percent); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); }); ctx.stroke();
+      ctx.fillStyle = getCss('--primary'); data.forEach(d => { const x=X(d.x.getTime()), y=Y(d.percent); ctx.beginPath(); ctx.arc(x,y,2.5,0,Math.PI*2); ctx.fill(); });
+      ctx.fillStyle = getCss('--muted'); ctx.fillText('Tage', cvs.width/2 - 10, cvs.height - 6); ctx.fillText('Prozent', 6, padding.t + 10);
+    }
+    function drawMoodChart() {
+      const cvs = $('#chartMood'); const ctx = cvs.getContext('2d'); const data = collectDailySeries().filter(d => d.mood != null);
+      ctx.clearRect(0,0,cvs.width,cvs.height);
+      if (!data.length) { drawNoData(ctx, cvs, 'Noch keine Stimmungsdaten'); return; }
+      const padding = { l:40, r:20, t:15, b:30 };
+      const xs = data.map(d=>d.x.getTime()); const minX = Math.min(...xs), maxX = Math.max(...xs);
+      const minY = 1, maxY = 10; const w = cvs.width - padding.l - padding.r; const h = cvs.height - padding.t - padding.b;
+      const X = t => padding.l + (w * (t - minX) / (maxX - minX || 1)); const Y = v => padding.t + h - (h * (v - minY) / (maxY - minY || 1));
+      ctx.strokeStyle = getCss('--border'); ctx.lineWidth = 1;
+      for (let y=1; y<=10; y+=1) { ctx.beginPath(); ctx.moveTo(padding.l, Y(y)); ctx.lineTo(cvs.width - padding.r, Y(y)); ctx.stroke(); if (y % 2 === 0) { ctx.fillStyle = getCss('--muted'); ctx.fillText(String(y), 8, Y(y)+3); } }
+      ctx.strokeStyle = getCss('--ok'); ctx.lineWidth = 2; ctx.beginPath();
+      data.forEach((d,i)=>{ const x=X(d.x.getTime()), y=Y(d.mood); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); }); ctx.stroke();
+      ctx.fillStyle = getCss('--ok'); data.forEach(d=>{ const x=X(d.x.getTime()), y=Y(d.mood); ctx.beginPath(); ctx.arc(x,y,2.5,0,Math.PI*2); ctx.fill(); });
+      ctx.fillStyle = getCss('--muted'); ctx.fillText('Tage', cvs.width/2 - 10, cvs.height - 6); ctx.fillText('Stimmung', 6, padding.t + 10);
+    }
+    function drawCharts() { drawDailyChart(); drawMoodChart(); renderHistoryList(); }
+
+    // ---------- Actions ----------
+    async function toggleDoneToday(id, done) {
+      const key = todayStr();
+      const day = currentUser.days[key] || { date:key, doneTaskIds: [] };
+      const set = new Set(day.doneTaskIds || []);
+      if (done) set.add(id); else set.delete(id);
+      day.doneTaskIds = Array.from(set);
+      day.weightedPercent = weightedPercentForDay(key, currentUser.tasks, day.doneTaskIds);
+      day.tasksCount = currentUser.tasks.filter(t => t.active !== false).length;
+      day.moodSuggested = Math.round(clamp(day.weightedPercent/100 * 9 + 1, 1, 10));
+      day.compositeScore = compositeScore(day.weightedPercent, day.tasksCount);
+      currentUser.days[key] = day;
+      await reencryptAndSave(currentUser);
+      renderDashboard();
+    }
+
+    async function saveTodayFinal() {
+      const key = todayStr();
+      const day = currentUser.days[key] || { date:key, doneTaskIds: [] };
+      day.weightedPercent = weightedPercentForDay(key, currentUser.tasks, day.doneTaskIds);
+      day.tasksCount = currentUser.tasks.filter(t => t.active !== false).length;
+      day.moodSuggested = Math.round(clamp(day.weightedPercent/100 * 9 + 1, 1, 10));
+      day.compositeScore = compositeScore(day.weightedPercent, day.tasksCount);
+      currentUser.days[key] = day;
+      await reencryptAndSave(currentUser);
+      alert('Heutiger Stand gespeichert.');
+      renderDashboard(); renderHistoryList(); drawCharts();
+    }
+
+    async function clearTodayMarks() {
+      const key = todayStr();
+      if (!currentUser.days[key]) return;
+      currentUser.days[key].doneTaskIds = [];
+      currentUser.days[key].weightedPercent = 0;
+      currentUser.days[key].compositeScore = 0;
+      await reencryptAndSave(currentUser);
+      renderTodayTasks(); renderDashboard();
+    }
+
+    // ---------- Events ----------
+    document.addEventListener('DOMContentLoaded', () => {
+      // Kein Auto-Login bei verschlüsselten Daten (Passwort nötig)
+      renderDateBadge();
+      updateUIAuth();
+      setActiveView('dashboard');
+
+      // Navigation
+      $$('.navlink').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); setActiveView(a.dataset.view); }));
+
+      // Auth
+      $('#authForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = $('#email').value;
+        const password = $('#password').value;
+        try { await login(email, password); }
+        catch (err) { alert(err.message); }
+      });
+      $('#registerBtn').addEventListener('click', async () => {
+        const email = $('#email').value;
+        const password = $('#password').value;
+        const name = $('#name').value;
+        try { await register(email, password, name); alert('Konto erstellt. Bitte jetzt anmelden.'); }
+        catch (err) { alert(err.message); }
+      });
+      $('#logoutBtn')?.addEventListener('click', () => { if (confirm('Abmelden?')) logout(); });
+      $('#deleteAccountBtn')?.addEventListener('click', () => {
+        if (!currentUser) return;
+        if (!confirm('Wirklich Konto und alle Daten löschen?')) return;
+        delete store.users[currentUser.email];
+        if (store.currentUserEmail === currentUser.email) store.currentUserEmail = null;
+        saveStore(store); logout();
+      });
+
+      // Quick Task
+      $('#quickTaskWeight').addEventListener('input', () => $('#quickTaskWeightLabel').textContent = $('#quickTaskWeight').value);
+      $('#quickTaskForm').addEventListener('submit', async (e) => {
+        e.preventDefault(); if (!currentUser) return;
+        const title = $('#quickTaskTitle').value.trim(); const weight = Number($('#quickTaskWeight').value);
+        if (!title) return;
+        currentUser.tasks.push({ id: uid(), title, weight, active:true, createdAt: new Date().toISOString() });
+        await reencryptAndSave(currentUser);
+        $('#quickTaskTitle').value = '';
+        renderTasks(); renderTodayTasks(); renderDashboard();
+      });
+
+      // To-Dos
+      $('#taskWeight').addEventListener('input', () => $('#taskWeightLabel').textContent = $('#taskWeight').value);
+      $('#addTaskForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = $('#taskTitle').value.trim(); const weight = Number($('#taskWeight').value);
+        if (!title) return;
+        currentUser.tasks.push({ id: uid(), title, weight, active:true, createdAt: new Date().toISOString() });
+        await reencryptAndSave(currentUser);
+        $('#taskTitle').value = '';
+        renderTasks(); renderTodayTasks(); renderDashboard();
+      });
+
+      // Today controls
+      $('#selectNone').addEventListener('click', () => clearTodayMarks());
+      $('#saveDayBtn').addEventListener('click', () => saveTodayFinal());
+      $('#clearTodayBtn').addEventListener('click', () => clearTodayMarks());
+
+      // Journal morning
+      $('#morningForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const key = todayStr();
+        const day = currentUser.days[key] || { date:key, doneTaskIds: [] };
+        day.morning = {
+          mood: Number($('#moodMorning').value),
+          motto: $('#motto').value.trim(),
+          joys: $('#joys').value.trim(),
+          goals: $('#goals').value.trim(),
+          gratitude: $('#gratitude').value.trim()
+        };
+        day.moodUser = day.morning.mood;
+        day.weightedPercent = weightedPercentForDay(key, currentUser.tasks, day.doneTaskIds||[]);
+        day.tasksCount = currentUser.tasks.filter(t => t.active !== false).length;
+        day.moodSuggested = Math.round(clamp(day.weightedPercent/100 * 9 + 1, 1, 10));
+        day.compositeScore = compositeScore(day.weightedPercent, day.tasksCount);
+        currentUser.days[key] = day;
+        await reencryptAndSave(currentUser);
+        renderDashboard(); renderHistoryList(); drawCharts();
+        alert('Morgeneintrag gespeichert.');
+      });
+
+      // Journal evening
+      $('#eveningForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const key = todayStr();
+        const day = currentUser.days[key] || { date:key, doneTaskIds: [] };
+        day.evening = {
+          mood: Number($('#moodEvening').value),
+          selfcare: $('#selfcare').value.trim(),
+          wins: $('#wins').value.trim(),
+          learnings: $('#learnings').value.trim(),
+          moments: $('#moments').value.trim(),
+        };
+        day.moodUser = day.evening.mood;
+        day.weightedPercent = weightedPercentForDay(key, currentUser.tasks, day.doneTaskIds||[]);
+        day.tasksCount = currentUser.tasks.filter(t => t.active !== false).length;
+        day.moodSuggested = Math.round(clamp(day.weightedPercent/100 * 9 + 1, 1, 10));
+        day.compositeScore = compositeScore(day.weightedPercent, day.tasksCount);
+        currentUser.days[key] = day;
+        await reencryptAndSave(currentUser);
+        renderDashboard(); renderHistoryList(); drawCharts();
+        alert('Abendeintrag gespeichert.');
+      });
+
+      // Weekly
+      $('#weekStart').value = isoWeekKey(todayStr());
+      $('#weeklyForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const wk = $('#weekStart').value || isoWeekKey(todayStr());
+        const w = currentUser.weeks[wk] || { start: wk };
+        w.good = $('#weekGood').value.trim();
+        w.learn = $('#weekLearn').value.trim();
+        w.celebrate = $('#weekCelebrate').value.trim();
+        w.next = $('#weekNext').value.trim();
+        const days = [];
+        for (let i=0;i<7;i++) {
+          const d = new Date(wk); d.setUTCDate(d.getUTCDate()+i);
+          const key = d.toISOString().slice(0,10);
+          if (currentUser.days[key]) days.push(currentUser.days[key]);
+        }
+        w.avgPercent = days.length ? days.reduce((s,d)=> s + (d.weightedPercent||0), 0) / days.length : 0;
+        w.avgMood = days.length ? days.reduce((s,d)=> s + (d.moodUser ?? d.moodSuggested ?? 0), 0) / days.length : 0;
+        w.avgTasks = days.length ? days.reduce((s,d)=> s + (d.tasksCount||0), 0) / days.length : 0;
+        currentUser.weeks[wk] = w;
+        await reencryptAndSave(currentUser);
+        updateWeekStats(); renderHistoryList();
+        alert('Woche gespeichert.');
+      });
+      $('#weekStart').addEventListener('change', () => updateWeekStats());
+
+      // Creative
+      $('#strengthForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const val = $('#strengthInput').value.trim();
+        if (!val) return;
+        const set = new Set(currentUser.creative.staerken || []); set.add(val);
+        currentUser.creative.staerken = Array.from(set).slice(0, 50);
+        await reencryptAndSave(currentUser);
+        $('#strengthInput').value = ''; renderStrengths();
+      });
+      $('#saveSafePlace').addEventListener('click', async () => { currentUser.creative.wohlgefuehl = $('#safePlace').value.trim(); await reencryptAndSave(currentUser); alert('Gespeichert.'); });
+      $('#saveThoughts').addEventListener('click', async () => { currentUser.creative.gedanken = $('#thoughts').value.trim(); await reencryptAndSave(currentUser); alert('Gespeichert.'); });
+      $('#saveJourney').addEventListener('click', async () => { currentUser.creative.reise = $('#journey').value.trim(); await reencryptAndSave(currentUser); alert('Gespeichert.'); });
+      $('#futureForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const date = $('#futureDate').value; const message = $('#futureMsg').value.trim();
+        if (!date || !message) return;
+        const arr = currentUser.creative.future || [];
+        arr.push({ id: uid(), date, message, delivered:false });
+        currentUser.creative.future = arr;
+        await reencryptAndSave(currentUser); renderFuture(); $('#futureMsg').value = '';
+      });
+
+      // Quotes
+      const QUOTES = [
+        'Auch das geht vorbei.',
+        'Kleine Schritte sind besser als keine Schritte.',
+        'Jeder Tag ist eine neue Chance.',
+        'Du bist nicht deine Gedanken.',
+        'Atme. Du schaffst das.',
+        'Fortschritt, nicht Perfektion.',
+        'Selbstfürsorge ist notwendig.',
+        'Es ist okay, Hilfe zu brauchen.',
+        'Heute ist ein guter Tag, um gut zu dir zu sein.',
+        'Erholung ist kein gerader Weg.'
+      ];
+      function randomQuote() { return '„' + QUOTES[Math.floor(Math.random()*QUOTES.length)] + '“'; }
+      $('#newQuote').addEventListener('click', () => { $('#quoteBox').textContent = randomQuote(); });
+      $('#favQuote').addEventListener('click', async () => {
+        const q = $('#quoteBox').textContent.trim(); if (!q) return;
+        const set = new Set(currentUser.quotesFavorites || []); set.add(q);
+        currentUser.quotesFavorites = Array.from(set);
+        await reencryptAndSave(currentUser); renderQuotes();
+      });
+
+      // History controls
+      $('#rangeSelect').addEventListener('change', () => drawCharts());
+      $('#historyFilter').addEventListener('change', () => renderHistoryList());
+
+      // Export/Import
+      function exportAll() {
+        if (!currentUser) return alert('Bitte zuerst anmelden.');
+        const data = { users: store.users, currentUserEmail: store.currentUserEmail };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'recovery-app-export.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      }
+      async function importAll(e) {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result);
+            if (!data.users) throw new Error('Ungültige Datei.');
+            store = data; saveStore(store);
+            alert('Import erfolgreich. Bitte neu anmelden, um zu entschlüsseln.');
+            logout();
+          } catch (err) { alert('Import fehlgeschlagen: ' + err.message); }
+        };
+        reader.readAsText(file); e.target.value = '';
+      }
+      $('#exportBtn').addEventListener('click', exportAll);
+      $('#exportBtn2').addEventListener('click', exportAll);
+      $('#importFile').addEventListener('change', importAll);
+      $('#importFile2').addEventListener('change', importAll);
+
+      // Header sign button
+      $('#signBtn').addEventListener('click', () => { if (currentUser) setActiveView('settings'); else window.scrollTo({ top: 0, behavior:'smooth' }); });
+
+      updateWeekStats();
+    });
+
+    function updateWeekStats() {
+      const wk = $('#weekStart')?.value || isoWeekKey(todayStr());
+      const w = currentUser?.weeks?.[wk];
+      if (w) $('#weekStats').textContent = `Ø Erledigung: ${Math.round(w.avgPercent||0)}%, Ø Stimmung: ${Math.round(w.avgMood||0)}/10, Aufgaben: ${Math.round(w.avgTasks||0)}`;
+      else $('#weekStats').textContent = 'Ø Erledigung: –, Ø Stimmung: –, Aufgaben: –';
+      if ($('#weekGood')) {
+        $('#weekGood').value = w?.good || '';
+        $('#weekLearn').value = w?.learn || '';
+        $('#weekCelebrate').value = w?.celebrate || '';
+        $('#weekNext').value = w?.next || '';
+      }
+    }
+
+    (function(){ $('#year').textContent = new Date().getFullYear(); renderDateBadge(); })();
+  </script>
+</body>
+</html>
